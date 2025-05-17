@@ -5,6 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import CreateGroupModal from '../../components/create-group-modal';
 import GroupDetailModal from '../../components/group-detail-modal';
 import { groupService } from '../../services/apis/group-service';
+import { COLORS, SHADOWS, SIZES } from '../../services/constants/theme';
 import { Group, GroupInvitation } from '../../services/types/group-types';
 
 export default function GroupsScreen() {
@@ -110,13 +111,21 @@ export default function GroupsScreen() {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={loading ? styles.centerContent : null}>
         {loading ? (
-          <ActivityIndicator size="large" color="#4dabf7" />
+          <ActivityIndicator size="large" color={COLORS.primary} />
         ) : (
           <>
+            {/* Üst Başlık */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Gruplarım</Text>
+              <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+                <Ionicons name="refresh" size={SIZES.iconMedium} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+
             {/* Davetler Bölümü */}
             {invitations.length > 0 && (
               <View style={styles.invitationsContainer}>
-                <Text style={styles.invitationsTitle}>Grup Davetleri</Text>
+                <Text style={styles.invitationsTitle}>Davetler</Text>
                 
                 {invitations.map((invitation) => (
                   <View key={invitation.id} style={styles.invitationCard}>
@@ -131,13 +140,13 @@ export default function GroupsScreen() {
                         style={styles.acceptButton}
                         onPress={() => handleAcceptInvitation(invitation.id || '', invitation.groupId, invitation.groupName)}
                       >
-                        <Ionicons name="checkmark" size={18} color="#fff" />
+                        <Ionicons name="checkmark" size={SIZES.iconSmall} color={COLORS.text} />
                       </TouchableOpacity>
                       <TouchableOpacity 
                         style={styles.rejectButton}
                         onPress={() => handleRejectInvitation(invitation.id || '')}
                       >
-                        <Ionicons name="close" size={18} color="#fff" />
+                        <Ionicons name="close" size={SIZES.iconSmall} color={COLORS.text} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -145,37 +154,32 @@ export default function GroupsScreen() {
               </View>
             )}
 
-            <View style={styles.header}>
-              <Text style={styles.title}>Gruplarım</Text>
-              <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-                <Ionicons name="refresh" size={24} color="#4dabf7" />
-              </TouchableOpacity>
-            </View>
-            
-            {groups.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="people-outline" size={50} color="#777" />
-                <Text style={styles.emptyText}>Henüz bir grubunuz yok</Text>
-                <Text style={styles.emptySubText}>Yeni bir grup oluşturmak için + butonuna tıklayın</Text>
-              </View>
-            ) : (
-              groups.map((group) => (
-                <View key={group.id} style={styles.groupCard}>
-                  <View style={styles.groupInfo}>
-                    <Text style={styles.groupName}>{group.name}</Text>
-                    <Text style={styles.groupMembers}>
-                      {group.description || 'Açıklama yok'}
-                    </Text>
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.viewButton}
+            {/* Gruplarım Bölümü */}
+            <View style={styles.groupsSection}>
+              {groups.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="people-outline" size={50} color={COLORS.darkGray} />
+                  <Text style={styles.emptyText}>Henüz bir grubunuz yok</Text>
+                  <Text style={styles.emptySubText}>Yeni bir grup oluşturmak için + butonuna tıklayın</Text>
+                </View>
+              ) : (
+                groups.map((group) => (
+                  <TouchableOpacity
+                    key={group.id}
+                    style={styles.groupCard}
                     onPress={() => setSelectedGroupId(group.id || null)}
                   >
-                    <Text style={styles.viewButtonText}>Görüntüle</Text>
+                    <View style={styles.groupInfo}>
+                      <Text style={styles.groupName}>{group.name}</Text>
+                      <Text style={styles.groupDescription}>
+                        {group.description || group.name + ' harcama grubu'}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={SIZES.iconMedium} color={COLORS.primary} />
                   </TouchableOpacity>
-                </View>
-              ))
-            )}
+                ))
+              )}
+            </View>
           </>
         )}
       </ScrollView>
@@ -184,7 +188,7 @@ export default function GroupsScreen() {
         style={styles.addButton}
         onPress={() => setShowCreateModal(true)}
       >
-        <Ionicons name="add" size={24} color="#fff" />
+        <Ionicons name="add" size={SIZES.iconMedium} color={COLORS.text} />
       </TouchableOpacity>
 
       {/* Grup Detay Modalı */}
@@ -212,7 +216,7 @@ export default function GroupsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: COLORS.background,
   },
   scrollView: {
     flex: 1,
@@ -230,122 +234,81 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: SIZES.heading,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.text,
   },
   refreshButton: {
     padding: 5,
   },
+  // Gruplar Bölümü
+  groupsSection: {
+    padding: 20,
+  },
   groupCard: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 10,
+    backgroundColor: COLORS.card,
+    borderRadius: SIZES.radius,
     padding: 15,
-    marginHorizontal: 20,
-    marginBottom: 15,
+    marginBottom: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    ...SHADOWS.small,
   },
   groupInfo: {
     flex: 1,
   },
   groupName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 5,
+    fontSize: SIZES.body,
+    fontWeight: '500',
+    color: COLORS.text,
+    marginBottom: 3,
   },
-  groupMembers: {
-    fontSize: 14,
-    color: '#aaa',
+  groupDescription: {
+    fontSize: SIZES.small,
+    color: COLORS.textSecondary,
   },
-  viewButton: {
-    backgroundColor: '#4dabf7',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 5,
-  },
-  viewButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  addButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: '#4dabf7',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: '#fff',
-    marginTop: 10,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: '#aaa',
-    marginTop: 5,
-    textAlign: 'center',
-  },
-  errorText: {
-    color: '#ff6b6b',
-    fontSize: 16,
-  },
+  // Davetler Bölümü
   invitationsContainer: {
     padding: 20,
-    marginBottom: 10,
+    paddingTop: 0,
+    paddingBottom: 5,
   },
   invitationsTitle: {
-    fontSize: 20,
+    fontSize: SIZES.label,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.text,
     marginBottom: 15,
   },
   invitationCard: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 10,
+    backgroundColor: COLORS.card,
+    borderRadius: SIZES.radius,
     padding: 15,
     marginBottom: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    ...SHADOWS.small,
   },
   invitationInfo: {
     flex: 1,
   },
   invitationGroupName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 5,
+    fontSize: SIZES.body,
+    fontWeight: '500',
+    color: COLORS.text,
+    marginBottom: 3,
   },
   invitationSender: {
-    fontSize: 14,
-    color: '#aaa',
+    fontSize: SIZES.small,
+    color: COLORS.textSecondary,
   },
   invitationActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   acceptButton: {
-    backgroundColor: '#4dabf7',
+    backgroundColor: COLORS.success,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -354,11 +317,46 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   rejectButton: {
-    backgroundColor: '#ff6b6b',
+    backgroundColor: COLORS.error,
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // Boş içerik
+  emptyContainer: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: COLORS.card,
+    borderRadius: SIZES.radius,
+  },
+  emptyText: {
+    fontSize: SIZES.body,
+    color: COLORS.text,
+    marginTop: 10,
+  },
+  emptySubText: {
+    fontSize: SIZES.small,
+    color: COLORS.textSecondary,
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: SIZES.body,
+  },
+  // Yeni grup ekleme butonu
+  addButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: COLORS.primary,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.medium,
   },
 }); 

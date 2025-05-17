@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { FC, PropsWithChildren, useEffect, useState } from 'react';
+import React, { FC, PropsWithChildren, useEffect, useState } from 'react';
 import {
     Alert,
     FlatList,
@@ -12,10 +12,15 @@ import {
     View
 } from 'react-native';
 import { expenseService, groupService } from '../../services/apis/group-service';
+import { COLORS } from '../../services/constants/theme';
 import { Expense, GroupMember } from '../../services/types/group-types';
 import InviteUserModal from '../invite-user-modal';
 import { styles } from './styles';
 import { GroupDetailModalProps } from './types';
+
+interface MemberWithExpense extends GroupMember {
+  totalExpense: number;
+}
 
 const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
   visible,
@@ -25,12 +30,15 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
   userName
 }) => {
   const [activeTab, setActiveTab] = useState<'members' | 'expenses'>('members');
-  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [members, setMembers] = useState<MemberWithExpense[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [groupName, setGroupName] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [isCurrentUserOwner, setIsCurrentUserOwner] = useState(false);
+  
+  // Grup özeti bilgileri
+  const [totalGroupExpense, setTotalGroupExpense] = useState(0);
   
   // Yeni harcama ekleme
   const [newExpense, setNewExpense] = useState({
@@ -53,17 +61,33 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
         setGroupName(group.name);
       }
       
+      // Grup harcamalarını yükle
+      const groupExpenses = await expenseService.getGroupExpenses(groupId);
+      setExpenses(groupExpenses);
+      
       // Grup üyelerini yükle
       const groupMembers = await groupService.getGroupMembers(groupId);
-      setMembers(groupMembers);
+      
+      // Toplam grup harcamasını hesapla
+      const total = groupExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+      setTotalGroupExpense(total);
+      
+      // Üye bazında harcama miktarlarını hesapla
+      const membersWithExpenses: MemberWithExpense[] = groupMembers.map(member => {
+        const memberExpenses = groupExpenses.filter(expense => expense.userId === member.userId);
+        const memberTotal = memberExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        return {
+          ...member,
+          totalExpense: memberTotal
+        };
+      });
+      
+      setMembers(membersWithExpenses);
       
       // Mevcut kullanıcının grup sahibi olup olmadığını kontrol et
       const currentMember = groupMembers.find(member => member.userId === currentUserId);
       setIsCurrentUserOwner(currentMember?.role === 'owner');
       
-      // Grup harcamalarını yükle
-      const groupExpenses = await expenseService.getGroupExpenses(groupId);
-      setExpenses(groupExpenses);
     } catch (error) {
       console.error('Grup detayları yüklenirken hata:', error);
       Alert.alert('Hata', 'Grup bilgileri yüklenirken bir hata oluştu.');
@@ -100,9 +124,8 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
       
       await expenseService.addExpense(expense);
       
-      // Harcamaları yeniden yükle
-      const updatedExpenses = await expenseService.getGroupExpenses(groupId);
-      setExpenses(updatedExpenses);
+      // Grup bilgilerini yeniden yükle
+      loadGroupDetails();
       
       // Formu temizle
       setNewExpense({ amount: '', description: '' });
@@ -112,7 +135,7 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
     }
   };
 
-  const handleRemoveUser = (member: GroupMember) => {
+  const handleRemoveUser = (member: MemberWithExpense) => {
     if (!isCurrentUserOwner) return;
     if (member.userId === currentUserId) {
       Alert.alert('Uyarı', 'Kendinizi gruptan çıkaramazsınız. Gruptan ayrılmak için "Gruptan Ayrıl" seçeneğini kullanın.');
@@ -187,6 +210,10 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
     Alert.alert('Başarılı', 'Kullanıcı gruba davet edildi.');
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+  };
+
   return (
     <Modal
       visible={visible}
@@ -204,6 +231,12 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
+          </View>
+
+          {/* Grup Özeti Kartı */}
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Toplam Harcama</Text>
+            <Text style={styles.summaryAmount}>{formatCurrency(totalGroupExpense)}</Text>
           </View>
 
           <View style={styles.tabContainer}>
@@ -234,7 +267,7 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
                       style={styles.actionButton}
                       onPress={() => setShowInviteModal(true)}
                     >
-                      <Ionicons name="person-add" size={18} color="#4dabf7" style={styles.actionButtonIcon} />
+                      <Ionicons name="person-add" size={18} color={COLORS.primary} style={styles.actionButtonIcon} />
                       <Text style={styles.actionButtonText}>Davet Et</Text>
                     </TouchableOpacity>
                     
@@ -242,7 +275,7 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
                       style={[styles.actionButton, styles.leaveButton]}
                       onPress={handleLeaveGroup}
                     >
-                      <Ionicons name="exit-outline" size={18} color="#ff6b6b" style={styles.actionButtonIcon} />
+                      <Ionicons name="exit-outline" size={18} color={COLORS.error} style={styles.actionButtonIcon} />
                       <Text style={[styles.actionButtonText, styles.leaveButtonText]}>Gruptan Ayrıl</Text>
                     </TouchableOpacity>
                   </View>
@@ -252,8 +285,10 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
                     keyExtractor={(item) => item.id || item.userId}
                     renderItem={({ item }) => (
                       <View style={styles.memberItem}>
-                        <View style={styles.memberAvatar}>
-                          <Ionicons name="person" size={24} color="#fff" />
+                        <View style={[styles.memberAvatar, item.userId === currentUserId ? {backgroundColor: COLORS.primary} : {backgroundColor: getAvatarColor(item.name)}]}>
+                          <Text style={styles.memberInitial}>
+                            {item.name.charAt(0).toUpperCase()}
+                          </Text>
                         </View>
                         <View style={styles.memberInfo}>
                           <Text style={styles.memberName}>{item.name}</Text>
@@ -267,12 +302,16 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
                             {item.role === 'owner' ? 'Sahibi' : 'Üye'}
                           </Text>
 
+                          <Text style={styles.expenseText}>
+                            {formatCurrency(item.totalExpense)}
+                          </Text>
+
                           {isCurrentUserOwner && item.userId !== currentUserId && (
                             <TouchableOpacity 
                               style={styles.removeButton}
                               onPress={() => handleRemoveUser(item)}
                             >
-                              <Ionicons name="close-circle" size={20} color="#ff6b6b" />
+                              <Ionicons name="close-circle" size={20} color={COLORS.error} />
                             </TouchableOpacity>
                           )}
                         </View>
@@ -311,20 +350,32 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
                   <FlatList
                     data={expenses}
                     keyExtractor={(item) => item.id || String(item.createdAt)}
-                    renderItem={({ item }) => (
-                      <View style={styles.expenseItem}>
-                        <View style={styles.expenseDetails}>
-                          <Text style={styles.expenseAmount}>{item.amount.toFixed(2)} ₺</Text>
-                          <Text style={styles.expenseDescription}>{item.description}</Text>
+                    renderItem={({ item }) => {
+                      // Harcamayı yapan kişiyi bul
+                      const spender = members.find(member => member.userId === item.userId);
+                      
+                      return (
+                        <View style={styles.expenseItem}>
+                          <View style={styles.expenseHeader}>
+                            <View style={[styles.spenderAvatar, {backgroundColor: getAvatarColor(item.userName)}]}>
+                              <Text style={styles.spenderInitial}>
+                                {item.userName.charAt(0).toUpperCase()}
+                              </Text>
+                            </View>
+                            <View style={styles.expenseInfo}>
+                              <Text style={styles.expenseUserName}>{item.userName}</Text>
+                              <Text style={styles.expenseDate}>
+                                {new Date(item.createdAt).toLocaleDateString('tr-TR')}
+                              </Text>
+                            </View>
+                            <Text style={styles.expenseAmount}>{formatCurrency(item.amount)}</Text>
+                          </View>
+                          <View style={styles.expenseDetails}>
+                            <Text style={styles.expenseDescription}>{item.description}</Text>
+                          </View>
                         </View>
-                        <View style={styles.expenseUserInfo}>
-                          <Text style={styles.expenseUserName}>{item.userName}</Text>
-                          <Text style={styles.expenseDate}>
-                            {new Date(item.createdAt).toLocaleDateString('tr-TR')}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
+                      );
+                    }}
                     ListEmptyComponent={
                       <View style={styles.emptyListContainer}>
                         <Text style={styles.emptyListText}>Henüz harcama yok</Text>
@@ -349,6 +400,25 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
       />
     </Modal>
   );
+};
+
+// İsme göre avatarlar için renk üretme
+const getAvatarColor = (name: string): string => {
+  const colors = [
+    '#4dabf7', // mavi
+    '#ff6b6b', // kırmızı
+    '#3dd598', // yeşil
+    '#ff9800', // turuncu
+    '#7048e8', // mor
+    '#f783ac', // pembe
+    '#fcc419', // sarı
+  ];
+  
+  // İsmin harflerinin ascii değerlerini topla
+  const sum = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  
+  // Renk dizisindeki bir rengi seç
+  return colors[sum % colors.length];
 };
 
 export default GroupDetailModal; 

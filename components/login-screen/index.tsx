@@ -22,7 +22,7 @@ const LoginScreen: FC<PropsWithChildren<LoginScreenProps>> = ({
       </View>
 
       <Formik
-        initialValues={{ email: 'erayercan1533@gmail.com', password: '123456' }}
+        initialValues={{ email: 'eray@gmail.com', password: '123456' }}
         validationSchema={LoginSchema}
         onSubmit={(values) => {
           if (onLogin) {

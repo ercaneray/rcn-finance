@@ -177,4 +177,25 @@ export const expenseService = {
   deleteExpense: async (id: string): Promise<void> => {
     await deleteDoc(doc(db, 'expenses', id));
   },
+
+  // Kişisel harcamaları getir (groupId olmayan)
+  getPersonalExpenses: async (userId: string): Promise<Expense[]> => {
+    const expensesQuery = query(
+      collection(db, 'expenses'),
+      where('userId', '==', userId),
+      where('groupId', '==', null),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const expenses = await getDocs(expensesQuery);
+    return expenses.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
+  },
+  
+  // Kişisel harcama ekle
+  addPersonalExpense: async (expense: Expense): Promise<string> => {
+    // groupId olmadan harcama ekle
+    const expenseToAdd = { ...expense, groupId: null };
+    const docRef = await addDoc(collection(db, 'expenses'), expenseToAdd);
+    return docRef.id;
+  },
 }; 

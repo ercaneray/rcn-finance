@@ -16,8 +16,10 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Ana Sayfa',
+          tabBarLabel: 'Ana Sayfa',
+          headerTitle: 'Ana Sayfa',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+            <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
@@ -25,8 +27,10 @@ export default function TabLayout() {
         name="groups"
         options={{
           title: 'Gruplarım',
+          tabBarLabel: 'Gruplarım',
+          headerTitle: 'Gruplarım',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
+            <Ionicons name="people" size={size} color={color} />
           ),
         }}
       />
@@ -34,8 +38,10 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profil',
+          tabBarLabel: 'Profil',
+          headerTitle: 'Profil',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />

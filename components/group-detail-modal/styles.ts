@@ -1,47 +1,65 @@
 import { StyleSheet } from 'react-native';
+import { COLORS, SHADOWS, SIZES } from '../../services/constants/theme';
 
 export const styles = StyleSheet.create({
   centeredView: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLORS.overlay,
   },
   modalView: {
-    backgroundColor: '#121212',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: SIZES.radiusLarge,
+    borderTopRightRadius: SIZES.radiusLarge,
     height: '90%',
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    ...SHADOWS.large,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: COLORS.border,
     paddingVertical: 15,
     paddingHorizontal: 20,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: SIZES.subheading,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.text,
   },
   closeButton: {
     padding: 5,
   },
+  // Grup özeti kartı
+  summaryCard: {
+    margin: 20,
+    marginBottom: 10,
+    padding: 15,
+    backgroundColor: COLORS.card,
+    borderRadius: SIZES.radius,
+    ...SHADOWS.small,
+  },
+  summaryTitle: {
+    fontSize: SIZES.body,
+    color: COLORS.textSecondary,
+    marginBottom: 5,
+  },
+  summaryAmount: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 5,
+  },
+  summaryInfo: {
+    fontSize: SIZES.small,
+    color: COLORS.textSecondary,
+  },
   tabContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: COLORS.border,
   },
   tab: {
     flex: 1,
@@ -50,15 +68,15 @@ export const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: '#4dabf7',
+    borderBottomColor: COLORS.primary,
   },
   tabText: {
-    color: '#ccc',
+    color: COLORS.textSecondary,
     fontWeight: '500',
-    fontSize: 16,
+    fontSize: SIZES.body,
   },
   activeTabText: {
-    color: '#4dabf7',
+    color: COLORS.primary,
   },
   loadingContainer: {
     flex: 1,
@@ -66,8 +84,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#fff',
-    fontSize: 16,
+    color: COLORS.text,
+    fontSize: SIZES.body,
   },
   // Tab içeriği konteyner
   tabContent: {
@@ -79,29 +97,29 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#222',
+    borderBottomColor: COLORS.border,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 5,
+    borderRadius: SIZES.radius,
     borderWidth: 1,
-    borderColor: '#4dabf7',
+    borderColor: COLORS.primary,
   },
   actionButtonIcon: {
     marginRight: 5,
   },
   actionButtonText: {
-    color: '#4dabf7',
+    color: COLORS.primary,
     fontWeight: '500',
   },
   leaveButton: {
-    borderColor: '#ff6b6b',
+    borderColor: COLORS.error,
   },
   leaveButtonText: {
-    color: '#ff6b6b',
+    color: COLORS.error,
   },
   // Üye stilleri
   memberItem: {
@@ -110,43 +128,54 @@ export const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#222',
+    borderBottomColor: COLORS.border,
   },
   memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#333',
+    width: SIZES.avatarMedium,
+    height: SIZES.avatarMedium,
+    borderRadius: SIZES.avatarMedium / 2,
+    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  memberInitial: {
+    color: COLORS.text,
+    fontSize: SIZES.body,
+    fontWeight: 'bold',
   },
   memberInfo: {
     flex: 1,
   },
   memberName: {
-    fontSize: 16,
-    color: '#fff',
+    fontSize: SIZES.body,
+    color: COLORS.text,
     fontWeight: '500',
   },
   memberEmail: {
-    fontSize: 14,
-    color: '#aaa',
+    fontSize: SIZES.small,
+    color: COLORS.textSecondary,
   },
   memberAction: {
     flexDirection: 'column',
     alignItems: 'flex-end',
   },
   memberRole: {
-    color: '#4dabf7',
+    color: COLORS.primary,
   },
   roleText: {
-    fontSize: 12,
+    fontSize: SIZES.small,
     fontWeight: '500',
     marginBottom: 5,
   },
   ownerRole: {
-    color: '#ff9800',
+    color: COLORS.warning,
+  },
+  expenseText: {
+    fontSize: SIZES.small,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    marginBottom: 5,
   },
   removeButton: {
     padding: 5,
@@ -155,60 +184,76 @@ export const styles = StyleSheet.create({
   expenseForm: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: COLORS.border,
   },
   expenseInput: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 8,
+    backgroundColor: COLORS.card,
+    borderRadius: SIZES.radius,
     padding: 12,
-    color: '#fff',
-    fontSize: 16,
+    color: COLORS.text,
+    fontSize: SIZES.body,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
     marginBottom: 10,
   },
   addExpenseButton: {
-    backgroundColor: '#4dabf7',
-    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.radius,
     padding: 12,
     alignItems: 'center',
   },
   addExpenseText: {
-    color: '#fff',
+    color: COLORS.text,
     fontWeight: 'bold',
   },
   expenseItem: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#222',
+    borderBottomColor: COLORS.border,
   },
-  expenseDetails: {
+  expenseHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 10,
+  },
+  spenderAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  spenderInitial: {
+    fontSize: SIZES.small,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  expenseInfo: {
+    flex: 1,
+  },
+  expenseDetails: {
+    marginLeft: 46, // Avatar genişliği + marginRight
   },
   expenseAmount: {
-    fontSize: 16,
+    fontSize: SIZES.body,
     fontWeight: 'bold',
-    color: '#4dabf7',
+    color: COLORS.primary,
     marginRight: 10,
   },
   expenseDescription: {
-    fontSize: 16,
-    color: '#fff',
-    flex: 1,
-  },
-  expenseUserInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    fontSize: SIZES.body,
+    color: COLORS.text,
   },
   expenseUserName: {
-    fontSize: 14,
-    color: '#aaa',
+    fontSize: SIZES.small,
+    fontWeight: '500',
+    color: COLORS.text,
   },
   expenseDate: {
-    fontSize: 14,
-    color: '#777',
+    fontSize: SIZES.small,
+    color: COLORS.textSecondary,
   },
   emptyListContainer: {
     padding: 30,
@@ -216,7 +261,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyListText: {
-    color: '#777',
-    fontSize: 16,
+    color: COLORS.textSecondary,
+    fontSize: SIZES.body,
   },
 }); 

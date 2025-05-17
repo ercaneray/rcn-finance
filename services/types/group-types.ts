@@ -20,7 +20,7 @@ export interface Expense {
   id?: string;
   amount: number;
   description: string;
-  groupId: string;
+  groupId?: string;
   userId: string;
   userName: string;
   createdAt: number;
