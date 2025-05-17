@@ -5,7 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import CreateGroupModal from '../../components/create-group-modal';
 import GroupDetailModal from '../../components/group-detail-modal';
 import { groupService } from '../../services/apis/group-service';
-import { Group } from '../../services/types/group-types';
+import { Group, GroupInvitation } from '../../services/types/group-types';
 
 export default function GroupsScreen() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -13,6 +13,8 @@ export default function GroupsScreen() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
+  const [loadingInvitations, setLoadingInvitations] = useState(true);
 
   const auth = getAuth();
   const currentUser = auth.currentUser;
@@ -20,6 +22,7 @@ export default function GroupsScreen() {
   useEffect(() => {
     if (currentUser) {
       loadGroups();
+      loadInvitations();
     }
   }, [currentUser]);
 
@@ -38,13 +41,61 @@ export default function GroupsScreen() {
     }
   };
 
+  const loadInvitations = async () => {
+    if (!currentUser || !currentUser.email) return;
+    
+    setLoadingInvitations(true);
+    try {
+      const userInvitations = await groupService.getUserInvitations(currentUser.email);
+      setInvitations(userInvitations);
+    } catch (error) {
+      console.error('Davetler yüklenirken hata:', error);
+    } finally {
+      setLoadingInvitations(false);
+    }
+  };
+
   const handleRefresh = () => {
     setRefreshing(true);
     loadGroups();
+    loadInvitations();
   };
 
   const handleCreateGroupSuccess = () => {
     loadGroups();
+  };
+
+  const handleAcceptInvitation = async (invitationId: string, groupId: string, groupName: string) => {
+    try {
+      await groupService.updateInvitationStatus(invitationId, 'accepted');
+      
+      // Kullanıcıyı gruba ekle
+      const member = {
+        groupId,
+        userId: currentUser?.uid || '',
+        name: currentUser?.displayName || 'Kullanıcı',
+        email: currentUser?.email || '',
+        role: 'member' as const,
+        joinedAt: Date.now()
+      };
+      
+      await groupService.addGroupMember(member);
+      
+      // Davetleri ve grupları yeniden yükle
+      loadInvitations();
+      loadGroups();
+    } catch (error) {
+      console.error('Davet kabul edilirken hata:', error);
+    }
+  };
+  
+  const handleRejectInvitation = async (invitationId: string) => {
+    try {
+      await groupService.updateInvitationStatus(invitationId, 'rejected');
+      loadInvitations();
+    } catch (error) {
+      console.error('Davet reddedilirken hata:', error);
+    }
   };
 
   if (!currentUser) {
@@ -62,6 +113,38 @@ export default function GroupsScreen() {
           <ActivityIndicator size="large" color="#4dabf7" />
         ) : (
           <>
+            {/* Davetler Bölümü */}
+            {invitations.length > 0 && (
+              <View style={styles.invitationsContainer}>
+                <Text style={styles.invitationsTitle}>Grup Davetleri</Text>
+                
+                {invitations.map((invitation) => (
+                  <View key={invitation.id} style={styles.invitationCard}>
+                    <View style={styles.invitationInfo}>
+                      <Text style={styles.invitationGroupName}>{invitation.groupName}</Text>
+                      <Text style={styles.invitationSender}>
+                        {invitation.inviterName} tarafından davet edildiniz
+                      </Text>
+                    </View>
+                    <View style={styles.invitationActions}>
+                      <TouchableOpacity 
+                        style={styles.acceptButton}
+                        onPress={() => handleAcceptInvitation(invitation.id || '', invitation.groupId, invitation.groupName)}
+                      >
+                        <Ionicons name="checkmark" size={18} color="#fff" />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.rejectButton}
+                        onPress={() => handleRejectInvitation(invitation.id || '')}
+                      >
+                        <Ionicons name="close" size={18} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
             <View style={styles.header}>
               <Text style={styles.title}>Gruplarım</Text>
               <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
@@ -110,6 +193,7 @@ export default function GroupsScreen() {
         groupId={selectedGroupId || ''}
         onClose={() => setSelectedGroupId(null)}
         currentUserId={currentUser.uid}
+        userName={currentUser.displayName || 'Kullanıcı'}
       />
 
       {/* Yeni Grup Oluşturma Modalı */}
@@ -223,5 +307,58 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#ff6b6b',
     fontSize: 16,
+  },
+  invitationsContainer: {
+    padding: 20,
+    marginBottom: 10,
+  },
+  invitationsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 15,
+  },
+  invitationCard: {
+    backgroundColor: '#1e1e1e',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  invitationInfo: {
+    flex: 1,
+  },
+  invitationGroupName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
+  },
+  invitationSender: {
+    fontSize: 14,
+    color: '#aaa',
+  },
+  invitationActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  acceptButton: {
+    backgroundColor: '#4dabf7',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  rejectButton: {
+    backgroundColor: '#ff6b6b',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 

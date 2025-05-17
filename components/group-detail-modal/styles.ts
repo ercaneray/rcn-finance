@@ -69,6 +69,40 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
+  // Tab içeriği konteyner
+  tabContent: {
+    flex: 1,
+  },
+  // Davet etme aksiyonları
+  tabActionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#222',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#4dabf7',
+  },
+  actionButtonIcon: {
+    marginRight: 5,
+  },
+  actionButtonText: {
+    color: '#4dabf7',
+    fontWeight: '500',
+  },
+  leaveButton: {
+    borderColor: '#ff6b6b',
+  },
+  leaveButtonText: {
+    color: '#ff6b6b',
+  },
   // Üye stilleri
   memberItem: {
     flexDirection: 'row',
@@ -99,15 +133,23 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: '#aaa',
   },
+  memberAction: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+  },
   memberRole: {
-    paddingHorizontal: 10,
+    color: '#4dabf7',
   },
   roleText: {
     fontSize: 12,
     fontWeight: '500',
+    marginBottom: 5,
   },
   ownerRole: {
     color: '#ff9800',
+  },
+  removeButton: {
+    padding: 5,
   },
   // Harcama stilleri
   expenseForm: {
@@ -167,5 +209,14 @@ export const styles = StyleSheet.create({
   expenseDate: {
     fontSize: 14,
     color: '#777',
+  },
+  emptyListContainer: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyListText: {
+    color: '#777',
+    fontSize: 16,
   },
 }); 

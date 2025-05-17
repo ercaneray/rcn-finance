@@ -6,6 +6,7 @@ import { styles } from './styles';
 import { RegisterScreenProps } from './types';
 
 const RegisterSchema = Yup.object().shape({
+  displayName: Yup.string().required('İsim gerekli'),
   email: Yup.string().email('Geçersiz e-posta').required('E-posta gerekli'),
   password: Yup.string().min(6, 'Şifre en az 6 karakter olmalı').required('Şifre gerekli'),
   confirmPassword: Yup.string()
@@ -25,16 +26,32 @@ const RegisterScreen: FC<PropsWithChildren<RegisterScreenProps>> = ({
       </View>
 
       <Formik
-        initialValues={{ email: '', password: '', confirmPassword: '' }}
+        initialValues={{ displayName: '', email: '', password: '', confirmPassword: '' }}
         validationSchema={RegisterSchema}
         onSubmit={(values) => {
           if (onRegister) {
-            onRegister(values.email, values.password);
+            onRegister(values.email, values.password, values.displayName);
           }
         }}
       >
         {({ handleChange, handleBlur, handleSubmit, values, errors, touched }) => (
           <View style={styles.formContainer}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Adınız</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Adınız ve soyadınız"
+                placeholderTextColor="#666"
+                onChangeText={handleChange('displayName')}
+                onBlur={handleBlur('displayName')}
+                value={values.displayName}
+                autoCapitalize="words"
+              />
+              {errors.displayName && touched.displayName && (
+                <Text style={styles.errorText}>{errors.displayName}</Text>
+              )}
+            </View>
+            
             <View style={styles.inputContainer}>
               <Text style={styles.label}>E-posta</Text>
               <TextInput

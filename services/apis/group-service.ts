@@ -11,7 +11,7 @@ import {
     where
 } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { Expense, Group, GroupMember } from '../types/group-types';
+import { Expense, Group, GroupInvitation, GroupMember } from '../types/group-types';
 
 // Gruplar için hizmet fonksiyonları
 export const groupService = {
@@ -74,6 +74,78 @@ export const groupService = {
     
     return { id: groupDoc.id, ...groupDoc.data() } as Group;
   },
+
+  // Kullanıcıyı gruba davet et
+  inviteUserToGroup: async (invitation: GroupInvitation): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'group_invitations'), invitation);
+    return docRef.id;
+  },
+
+  // Kullanıcının davetlerini getir
+  getUserInvitations: async (userEmail: string): Promise<GroupInvitation[]> => {
+    const invitationsQuery = query(
+      collection(db, 'group_invitations'),
+      where('invitedEmail', '==', userEmail),
+      where('status', '==', 'pending')
+    );
+    
+    const invitations = await getDocs(invitationsQuery);
+    return invitations.docs.map(doc => ({ id: doc.id, ...doc.data() } as GroupInvitation));
+  },
+
+  // Davet durumunu güncelle (kabul/red)
+  updateInvitationStatus: async (invitationId: string, status: 'accepted' | 'rejected'): Promise<void> => {
+    await updateDoc(doc(db, 'group_invitations', invitationId), { 
+      status,
+      updatedAt: Date.now()
+    });
+  },
+
+  // Kullanıcıyı gruptan çıkar
+  removeUserFromGroup: async (memberId: string): Promise<void> => {
+    await deleteDoc(doc(db, 'group_members', memberId));
+  },
+
+  // Kullanıcının gruptan ayrılması
+  leaveGroup: async (userId: string, groupId: string): Promise<void> => {
+    // İlgili üyelik kaydını bul
+    const membershipQuery = query(
+      collection(db, 'group_members'),
+      where('userId', '==', userId),
+      where('groupId', '==', groupId)
+    );
+    
+    const memberships = await getDocs(membershipQuery);
+    
+    if (memberships.empty) {
+      throw new Error('Grup üyeliği bulunamadı');
+    }
+    
+    // Üyelik kaydını sil
+    const membershipId = memberships.docs[0].id;
+    await deleteDoc(doc(db, 'group_members', membershipId));
+  },
+
+  // Email ile kullanıcı arama (davet için)
+  searchUserByEmail: async (email: string): Promise<{ uid: string, email: string, displayName: string } | null> => {
+    const usersQuery = query(
+      collection(db, 'users'),
+      where('email', '==', email)
+    );
+    
+    const users = await getDocs(usersQuery);
+    
+    if (users.empty) {
+      return null;
+    }
+    
+    const userData = users.docs[0].data();
+    return {
+      uid: users.docs[0].id,
+      email: userData.email,
+      displayName: userData.displayName || 'İsimsiz Kullanıcı'
+    };
+  }
 };
 
 // Harcamalar için hizmet fonksiyonları

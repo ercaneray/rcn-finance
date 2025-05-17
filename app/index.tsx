@@ -2,18 +2,13 @@ import { Redirect } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 export default function Index() {
-  // Sadece başlangıçta kimlik kontrolü ve yönlendirme yap
-  // Auth durumuna göre ya giriş sayfasına ya da ana ekrana yönlendir
-  
-  // Bu sayfa sadece yönlendirme amaçlı kullanılıyor
-  // Kullanıcının oturum durumuna göre uygun sayfaya yönlendirme yapılacak
-  
+  // Test amaçlı doğrudan sekmelere yönlendir
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#4dabf7" />
       <Text style={styles.loadingText}>Yükleniyor...</Text>
       
-      <Redirect href="/auth" />
+      <Redirect href="/(tabs)" />
     </View>
   );
 }

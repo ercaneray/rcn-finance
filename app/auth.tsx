@@ -22,14 +22,13 @@ export default function Auth() {
     }
   };
 
-  const handleRegister = async (email: string, password: string) => {
+  const handleRegister = async (email: string, password: string, displayName: string) => {
     try {
       // Yeni kullanıcı oluştur
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Kullanıcı profilini güncelle (email'den bir kullanıcı adı oluştur)
-      const displayName = email.split('@')[0];
+      // Kullanıcı profilini güncelle
       await updateProfile(user, {
         displayName: displayName
       });

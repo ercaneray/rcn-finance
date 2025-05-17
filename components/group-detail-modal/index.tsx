@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { expenseService, groupService } from '../../services/apis/group-service';
 import { Expense, GroupMember } from '../../services/types/group-types';
+import InviteUserModal from '../invite-user-modal';
 import { styles } from './styles';
 import { GroupDetailModalProps } from './types';
 
@@ -20,13 +21,16 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
   visible,
   groupId,
   onClose,
-  currentUserId
+  currentUserId,
+  userName
 }) => {
   const [activeTab, setActiveTab] = useState<'members' | 'expenses'>('members');
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [groupName, setGroupName] = useState('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [isCurrentUserOwner, setIsCurrentUserOwner] = useState(false);
   
   // Yeni harcama ekleme
   const [newExpense, setNewExpense] = useState({
@@ -52,6 +56,10 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
       // Grup üyelerini yükle
       const groupMembers = await groupService.getGroupMembers(groupId);
       setMembers(groupMembers);
+      
+      // Mevcut kullanıcının grup sahibi olup olmadığını kontrol et
+      const currentMember = groupMembers.find(member => member.userId === currentUserId);
+      setIsCurrentUserOwner(currentMember?.role === 'owner');
       
       // Grup harcamalarını yükle
       const groupExpenses = await expenseService.getGroupExpenses(groupId);
@@ -104,6 +112,81 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
     }
   };
 
+  const handleRemoveUser = (member: GroupMember) => {
+    if (!isCurrentUserOwner) return;
+    if (member.userId === currentUserId) {
+      Alert.alert('Uyarı', 'Kendinizi gruptan çıkaramazsınız. Gruptan ayrılmak için "Gruptan Ayrıl" seçeneğini kullanın.');
+      return;
+    }
+
+    Alert.alert(
+      'Üyeyi Çıkar',
+      `${member.name} üyesini gruptan çıkarmak istediğinize emin misiniz?`,
+      [
+        { text: 'İptal', style: 'cancel' },
+        { 
+          text: 'Çıkar', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (!member.id) {
+                throw new Error('Üye ID bulunamadı');
+              }
+              
+              await groupService.removeUserFromGroup(member.id);
+              
+              // Üyeler listesini güncelle
+              const updatedMembers = members.filter(m => m.id !== member.id);
+              setMembers(updatedMembers);
+              
+              Alert.alert('Başarılı', 'Üye gruptan çıkarıldı.');
+            } catch (error) {
+              console.error('Üye çıkarılırken hata:', error);
+              Alert.alert('Hata', 'Üye çıkarılırken bir hata oluştu.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleLeaveGroup = () => {
+    if (isCurrentUserOwner && members.length > 1) {
+      Alert.alert(
+        'Uyarı',
+        'Siz grup sahibisiniz. Gruptan ayrılmadan önce başka bir üyeyi grup sahibi yapmalısınız.',
+        [{ text: 'Tamam' }]
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Gruptan Ayrıl',
+      'Bu gruptan ayrılmak istediğinize emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        { 
+          text: 'Ayrıl', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await groupService.leaveGroup(currentUserId, groupId);
+              Alert.alert('Başarılı', 'Gruptan ayrıldınız.');
+              onClose();
+            } catch (error) {
+              console.error('Gruptan ayrılırken hata:', error);
+              Alert.alert('Hata', 'Gruptan ayrılırken bir hata oluştu.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleInviteSuccess = () => {
+    Alert.alert('Başarılı', 'Kullanıcı gruba davet edildi.');
+  };
+
   return (
     <Modal
       visible={visible}
@@ -145,29 +228,58 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
           ) : (
             <>
               {activeTab === 'members' && (
-                <FlatList
-                  data={members}
-                  keyExtractor={(item) => item.id || item.userId}
-                  renderItem={({ item }) => (
-                    <View style={styles.memberItem}>
-                      <View style={styles.memberAvatar}>
-                        <Ionicons name="person" size={24} color="#fff" />
+                <View style={styles.tabContent}>
+                  <View style={styles.tabActionsContainer}>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => setShowInviteModal(true)}
+                    >
+                      <Ionicons name="person-add" size={18} color="#4dabf7" style={styles.actionButtonIcon} />
+                      <Text style={styles.actionButtonText}>Davet Et</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.leaveButton]}
+                      onPress={handleLeaveGroup}
+                    >
+                      <Ionicons name="exit-outline" size={18} color="#ff6b6b" style={styles.actionButtonIcon} />
+                      <Text style={[styles.actionButtonText, styles.leaveButtonText]}>Gruptan Ayrıl</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <FlatList
+                    data={members}
+                    keyExtractor={(item) => item.id || item.userId}
+                    renderItem={({ item }) => (
+                      <View style={styles.memberItem}>
+                        <View style={styles.memberAvatar}>
+                          <Ionicons name="person" size={24} color="#fff" />
+                        </View>
+                        <View style={styles.memberInfo}>
+                          <Text style={styles.memberName}>{item.name}</Text>
+                          <Text style={styles.memberEmail}>{item.email}</Text>
+                        </View>
+                        <View style={styles.memberAction}>
+                          <Text style={[
+                            styles.roleText, 
+                            item.role === 'owner' ? styles.ownerRole : styles.memberRole
+                          ]}>
+                            {item.role === 'owner' ? 'Sahibi' : 'Üye'}
+                          </Text>
+
+                          {isCurrentUserOwner && item.userId !== currentUserId && (
+                            <TouchableOpacity 
+                              style={styles.removeButton}
+                              onPress={() => handleRemoveUser(item)}
+                            >
+                              <Ionicons name="close-circle" size={20} color="#ff6b6b" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
-                      <View style={styles.memberInfo}>
-                        <Text style={styles.memberName}>{item.name}</Text>
-                        <Text style={styles.memberEmail}>{item.email}</Text>
-                      </View>
-                      <View style={styles.memberRole}>
-                        <Text style={[
-                          styles.roleText, 
-                          item.role === 'owner' ? styles.ownerRole : styles.memberRole
-                        ]}>
-                          {item.role === 'owner' ? 'Sahibi' : 'Üye'}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                />
+                    )}
+                  />
+                </View>
               )}
 
               {activeTab === 'expenses' && (
@@ -213,6 +325,11 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
                         </View>
                       </View>
                     )}
+                    ListEmptyComponent={
+                      <View style={styles.emptyListContainer}>
+                        <Text style={styles.emptyListText}>Henüz harcama yok</Text>
+                      </View>
+                    }
                   />
                 </>
               )}
@@ -220,6 +337,16 @@ const GroupDetailModal: FC<PropsWithChildren<GroupDetailModalProps>> = ({
           )}
         </View>
       </KeyboardAvoidingView>
+
+      <InviteUserModal 
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onSuccess={handleInviteSuccess}
+        groupId={groupId}
+        groupName={groupName}
+        currentUserId={currentUserId}
+        currentUserName={userName}
+      />
     </Modal>
   );
 };

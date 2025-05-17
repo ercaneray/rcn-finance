@@ -24,4 +24,16 @@ export interface Expense {
   userId: string;
   userName: string;
   createdAt: number;
+}
+
+export interface GroupInvitation {
+  id?: string;
+  groupId: string;
+  groupName: string;
+  inviterUserId: string;
+  inviterName: string;
+  invitedEmail: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: number;
+  updatedAt?: number;
 } 

@@ -3,4 +3,5 @@ export interface GroupDetailModalProps {
   groupId: string;
   onClose: () => void;
   currentUserId: string;
+  userName: string;
 } 

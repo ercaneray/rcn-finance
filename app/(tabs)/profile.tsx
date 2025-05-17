@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { getAuth, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { db } from '../../firebaseConfig';
 
 interface UserProfile {
@@ -72,6 +72,32 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleEditProfile = () => {
+    Alert.alert("Bilgi", "Profil düzenleme özelliği henüz geliştirme aşamasında.");
+  };
+
+  const handleNotifications = () => {
+    Alert.alert("Bilgi", "Bildirim ayarları henüz geliştirme aşamasında.");
+  };
+
+  const handleChangePassword = () => {
+    Alert.alert("Bilgi", "Şifre değiştirme özelliği henüz geliştirme aşamasında.");
+  };
+
+  const handleHelp = () => {
+    Alert.alert(
+      "Yardım",
+      "Uygulama hakkında yardım almak için support@finanstakip.com adresine e-posta gönderebilirsiniz."
+    );
+  };
+
+  const handleAbout = () => {
+    Alert.alert(
+      "Hakkında",
+      "Finans Takip v1.0\nGruplara özel harcama takibi yapmanıza yardımcı olan bir uygulamadır. © 2024"
+    );
+  };
+
   if (!currentUser) {
     return (
       <View style={[styles.container, styles.centerContent]}>
@@ -89,6 +115,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#4dabf7" />
         <Text style={styles.loadingText}>Yükleniyor...</Text>
       </View>
     );
@@ -107,19 +134,19 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Hesap Bilgileri</Text>
         
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleEditProfile}>
           <Ionicons name="person-outline" size={24} color="#4dabf7" style={styles.menuIcon} />
           <Text style={styles.menuText}>Profili Düzenle</Text>
           <Ionicons name="chevron-forward" size={20} color="#777" />
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleNotifications}>
           <Ionicons name="notifications-outline" size={24} color="#4dabf7" style={styles.menuIcon} />
           <Text style={styles.menuText}>Bildirimler</Text>
           <Ionicons name="chevron-forward" size={20} color="#777" />
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleChangePassword}>
           <Ionicons name="lock-closed-outline" size={24} color="#4dabf7" style={styles.menuIcon} />
           <Text style={styles.menuText}>Şifre Değiştir</Text>
           <Ionicons name="chevron-forward" size={20} color="#777" />
@@ -129,13 +156,13 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Diğer</Text>
         
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleHelp}>
           <Ionicons name="help-circle-outline" size={24} color="#4dabf7" style={styles.menuIcon} />
           <Text style={styles.menuText}>Yardım</Text>
           <Ionicons name="chevron-forward" size={20} color="#777" />
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
           <Ionicons name="information-circle-outline" size={24} color="#4dabf7" style={styles.menuIcon} />
           <Text style={styles.menuText}>Hakkında</Text>
           <Ionicons name="chevron-forward" size={20} color="#777" />
