@@ -39,3 +39,5 @@ yarn-error.*
 app-example
 firebaseconfig.js
 .cursor/
+ocr-server/.env
+ocr-server/eng.traineddata
