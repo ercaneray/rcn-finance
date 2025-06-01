@@ -7,17 +7,21 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
-import { groupService } from '../../services/apis/group-service';
-import { COLORS, SIZES } from '../../services/constants/theme';
+import { expenseService, groupService } from '../../services/apis/group-service';
+import { COLORS, SHADOWS, SIZES } from '../../services/constants/theme';
 import { Group } from '../../services/types/group-types';
 
-const SERVER_URL = 'http://172.20.10.2:3000';
+const SERVER_URL = 'http://172.20.10.10:3000';
 
 export default function ScanScreen() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -29,6 +33,12 @@ export default function ScanScreen() {
   const [cameraReady, setCameraReady] = useState(false);
   const [summaryModalVisible, setSummaryModalVisible] = useState(false);
   const [summaryData, setSummaryData] = useState<{ açıklama: string, tutar: number } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Düzenleme için state'ler
+  const [editableAmount, setEditableAmount] = useState<string>('');
+  const [editableDescription, setEditableDescription] = useState<string>('');
+  const [isEditing, setIsEditing] = useState(false);
 
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<any>(null);
@@ -40,6 +50,13 @@ export default function ScanScreen() {
       loadGroups();
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (summaryData) {
+      setEditableAmount(summaryData.tutar.toString());
+      setEditableDescription(summaryData.açıklama);
+    }
+  }, [summaryData]);
 
   const loadGroups = async () => {
     if (!currentUser) return;
@@ -98,31 +115,80 @@ export default function ScanScreen() {
     }
   };
 
-  const handleDestinationSelect = (destination: 'personal' | Group) => {
-    setSelectedDestination(destination);
-    setIsSelecting(false);
-    setTimeout(() => {
-      let message = destination === 'personal'
-        ? 'Fiş kişisel harcama olarak işlenecek'
-        : `Fiş "${destination.name}" grubuna eklenecek`;
-      Alert.alert('Bilgi', message, [
-        {
-          text: 'Tamam',
-          onPress: () => {
-            setCapturedImage(null);
-            setSelectedDestination(null);
-            setShowDestinationModal(false);
-          }
-        }
-      ]);
-    }, 500);
+  const validateExpenseData = () => {
+    const amount = parseFloat(editableAmount);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Hata', 'Lütfen geçerli bir tutar girin.');
+      return false;
+    }
+    if (!editableDescription.trim()) {
+      Alert.alert('Hata', 'Lütfen harcama açıklaması girin.');
+      return false;
+    }
+    return true;
   };
 
-  const cancelCapture = () => {
+  const saveExpense = async (destination: 'personal' | Group) => {
+    if (!validateExpenseData() || !currentUser) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const baseExpenseData = {
+        amount: parseFloat(editableAmount),
+        description: editableDescription.trim(),
+        userId: currentUser.uid,
+        userName: currentUser.displayName || currentUser.email || 'İsimsiz Kullanıcı',
+        createdAt: Date.now(),
+      };
+
+      if (destination === 'personal') {
+        await expenseService.addPersonalExpense(baseExpenseData);
+        Alert.alert('Başarılı!', 'Harcama kişisel giderlerinize eklendi.', [
+          {
+            text: 'Tamam',
+            onPress: () => resetScanState()
+          }
+        ]);
+      } else {
+        const groupExpenseData = { ...baseExpenseData, groupId: destination.id };
+        await expenseService.addExpense(groupExpenseData);
+        Alert.alert('Başarılı!', `Harcama "${destination.name}" grubuna eklendi.`, [
+          {
+            text: 'Tamam',
+            onPress: () => resetScanState()
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Harcama kaydedilirken hata:', error);
+      Alert.alert('Hata', 'Harcama kaydedilirken bir sorun oluştu.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDestinationSelect = (destination: 'personal' | Group) => {
+    setSelectedDestination(destination);
+    setShowDestinationModal(false);
+    saveExpense(destination);
+  };
+
+  const resetScanState = () => {
     setCapturedImage(null);
     setShowDestinationModal(false);
     setSelectedDestination(null);
     setSummaryModalVisible(false);
+    setSummaryData(null);
+    setIsSelecting(false);
+    setIsEditing(false);
+    setEditableAmount('');
+    setEditableDescription('');
+  };
+
+  const cancelCapture = () => {
+    resetScanState();
   };
 
   const retryCapture = async () => {
@@ -135,6 +201,29 @@ export default function ScanScreen() {
 
   const handleCameraReady = () => {
     setCameraReady(true);
+  };
+
+  const showDestinationSelection = () => {
+    if (!validateExpenseData()) {
+      return;
+    }
+    setSummaryModalVisible(false);
+    setShowDestinationModal(true);
+  };
+
+  const toggleEditMode = () => {
+    setIsEditing(!isEditing);
+  };
+
+  const formatCurrency = (amount: string | number) => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(numAmount)) return '0 TL';
+    return new Intl.NumberFormat('tr-TR', { 
+      style: 'currency', 
+      currency: 'TRY',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(numAmount);
   };
 
   if (!permission) {
@@ -198,48 +287,201 @@ export default function ScanScreen() {
         </View>
       )}
 
+      {/* Enhanced Summary Modal */}
       <Modal
         visible={summaryModalVisible || isProcessing}
         animationType="slide"
         transparent={true}
         onRequestClose={() => setSummaryModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { padding: 20, alignItems: 'center' }]}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.enhancedModalContent}>
             {isProcessing ? (
-              <>
+              <View style={styles.processingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
-                <Text style={{ marginTop: 15 }}>İşleniyor...</Text>
-              </>
+                <Text style={styles.processingText}>Fiş işleniyor...</Text>
+                <Text style={styles.processingSubtext}>OCR ve AI analizi yapılıyor</Text>
+              </View>
             ) : (
-              <>
-                <Text style={styles.modalTitle}>Harcama Özeti</Text>
-                <Text style={{ fontSize: 16, marginTop: 10 }}>{summaryData?.açıklama}</Text>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', marginTop: 10 }}>Tutar: {summaryData?.tutar} TL</Text>
-
-                <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 20, width: '100%' }}>
-                  <TouchableOpacity onPress={cancelCapture}>
-                    <Text style={{ color: 'red' }}>İptal</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => {
-                    setIsSelecting(true);
-                    setSummaryModalVisible(false);
-                  }}>
-                    <Text style={{ color: 'green' }}>Devam Et</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => {
-                    retryCapture();
-                    setSummaryModalVisible(false);
-                  }}>
-                    <Text style={{ color: 'blue' }}>Yeniden Dene</Text>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Header */}
+                <View style={styles.modalHeader}>
+                  <View style={styles.receiptIconContainer}>
+                    <Ionicons name="receipt" size={24} color={COLORS.primary} />
+                  </View>
+                  <Text style={styles.modalTitle}>Harcama Özeti</Text>
+                  <TouchableOpacity 
+                    style={styles.editButton}
+                    onPress={toggleEditMode}
+                  >
+                    <Ionicons 
+                      name={isEditing ? "checkmark" : "pencil"} 
+                      size={20} 
+                      color={isEditing ? COLORS.success : COLORS.primary} 
+                    />
                   </TouchableOpacity>
                 </View>
+
+                {/* Expense Details */}
+                <View style={styles.expenseDetailsContainer}>
+                  {/* Amount Section */}
+                  <View style={styles.expenseSection}>
+                    <Text style={styles.sectionLabel}>Tutar</Text>
+                    {isEditing ? (
+                      <View style={styles.inputContainer}>
+                        <TextInput
+                          style={styles.amountInput}
+                          value={editableAmount}
+                          onChangeText={setEditableAmount}
+                          placeholder="0.00"
+                          placeholderTextColor={COLORS.textSecondary}
+                          keyboardType="numeric"
+                          selectTextOnFocus={true}
+                        />
+                        <Text style={styles.currencyLabel}>TL</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.displayContainer}>
+                        <Text style={styles.amountDisplay}>{formatCurrency(editableAmount)}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Description Section */}
+                  <View style={styles.expenseSection}>
+                    <Text style={styles.sectionLabel}>Açıklama</Text>
+                    {isEditing ? (
+                      <TextInput
+                        style={styles.descriptionInput}
+                        value={editableDescription}
+                        onChangeText={setEditableDescription}
+                        placeholder="Harcama açıklaması..."
+                        placeholderTextColor={COLORS.textSecondary}
+                        multiline={true}
+                        numberOfLines={3}
+                        textAlignVertical="top"
+                      />
+                    ) : (
+                      <View style={styles.displayContainer}>
+                        <Text style={styles.descriptionDisplay}>{editableDescription}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* Action Buttons */}
+                <View style={styles.actionButtonsContainer}>
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.secondaryButton]} 
+                    onPress={cancelCapture}
+                  >
+                    <Ionicons name="close" size={20} color={COLORS.error} />
+                    <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>
+                      İptal
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.primaryButton]} 
+                    onPress={showDestinationSelection}
+                  >
+                    <Ionicons name="checkmark" size={20} color="white" />
+                    <Text style={[styles.actionButtonText, styles.primaryButtonText]}>
+                      Kaydet
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.tertiaryButton]} 
+                    onPress={retryCapture}
+                  >
+                    <Ionicons name="refresh" size={20} color={COLORS.primary} />
+                    <Text style={[styles.actionButtonText, styles.tertiaryButtonText]}>
+                      Tekrar Tara
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Destination Selection Modal */}
+      <Modal
+        visible={showDestinationModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDestinationModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.destinationModalContent}>
+            {isSaving ? (
+              <View style={styles.savingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={styles.savingText}>Kaydediliyor...</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.destinationModalTitle}>Harcamayı Nereye Kaydetmek İstiyorsunuz?</Text>
+                
+                <ScrollView style={styles.destinationList}>
+                  {/* Personal Expenses Option */}
+                  <TouchableOpacity
+                    style={styles.destinationOption}
+                    onPress={() => handleDestinationSelect('personal')}
+                  >
+                    <View style={styles.destinationIconContainer}>
+                      <Ionicons name="person-outline" size={24} color={COLORS.primary} />
+                    </View>
+                    <View style={styles.destinationInfo}>
+                      <Text style={styles.destinationName}>Kişisel Harcamalar</Text>
+                      <Text style={styles.destinationDescription}>Bu harcamayı sadece sizin görebileceğiniz kişisel harcamalarınıza ekleyin</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+
+                  {/* Groups */}
+                  {groups.length > 0 && (
+                    <>
+                      <View style={styles.sectionDivider} />
+                      <Text style={styles.sectionTitle}>Gruplarım</Text>
+                      {groups.map((group) => (
+                        <TouchableOpacity
+                          key={group.id}
+                          style={styles.destinationOption}
+                          onPress={() => handleDestinationSelect(group)}
+                        >
+                          <View style={styles.destinationIconContainer}>
+                            <Ionicons name="people-outline" size={24} color={COLORS.primary} />
+                          </View>
+                          <View style={styles.destinationInfo}>
+                            <Text style={styles.destinationName}>{group.name}</Text>
+                            <Text style={styles.destinationDescription}>
+                              {group.description || 'Bu harcamayı grup üyeleriyle paylaşın'}
+                            </Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  )}
+                </ScrollView>
+
+                <TouchableOpacity
+                  style={styles.cancelDestinationButton}
+                  onPress={() => setShowDestinationModal(false)}
+                >
+                  <Text style={styles.cancelDestinationButtonText}>İptal</Text>
+                </TouchableOpacity>
               </>
             )}
           </View>
         </View>
       </Modal>
-
     </View>
   );
 }
@@ -313,20 +555,242 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    width: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+  enhancedModalContent: {
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    width: '90%',
+    maxHeight: '85%',
+    ...SHADOWS.large,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  receiptIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: `${COLORS.primary}20`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: COLORS.text,
+    flex: 1,
+  },
+  editButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: `${COLORS.primary}15`,
+  },
+  processingContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  processingText: {
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
     textAlign: 'center',
+  },
+  processingSubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  expenseDetailsContainer: {
+    padding: 20,
+  },
+  expenseSection: {
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    paddingVertical: 12,
+  },
+  currencyLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.textSecondary,
+    marginLeft: 8,
+  },
+  displayContainer: {
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  amountDisplay: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    textAlign: 'center',
+  },
+  descriptionInput: {
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: COLORS.text,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  descriptionDisplay: {
+    fontSize: 16,
+    color: COLORS.text,
+    lineHeight: 22,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    ...SHADOWS.small,
+  },
+  secondaryButton: {
+    backgroundColor: COLORS.error,
+  },
+  primaryButton: {
+    backgroundColor: COLORS.success,
+  },
+  tertiaryButton: {
+    backgroundColor: COLORS.primary,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  secondaryButtonText: {
+    color: 'white',
+  },
+  primaryButtonText: {
+    color: 'white',
+  },
+  tertiaryButtonText: {
+    color: 'white',
+  },
+  destinationModalContent: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    padding: 20,
+  },
+  destinationModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: COLORS.text,
+    marginBottom: 20,
+  },
+  destinationList: {
+    maxHeight: 400,
+  },
+  destinationOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  destinationIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  destinationInfo: {
+    flex: 1,
+  },
+  destinationName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  destinationDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  cancelDestinationButton: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: COLORS.error,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelDestinationButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  savingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  savingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: COLORS.text,
   },
   errorText: {
     color: COLORS.error,
