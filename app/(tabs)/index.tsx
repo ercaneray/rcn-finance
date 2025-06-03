@@ -914,7 +914,7 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: COLORS.overlay,
+    backgroundColor: COLORS.background,
   },
   modalContainer: {
     borderTopLeftRadius: SIZES.radiusLarge,
@@ -1002,7 +1002,7 @@ const styles = StyleSheet.create({
   // Data Point Modal styles
   dataPointModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
   },

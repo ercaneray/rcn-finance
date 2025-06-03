@@ -5,7 +5,7 @@ export const styles = StyleSheet.create({
   centeredView: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: COLORS.overlay,
+    backgroundColor: COLORS.background,
   },
   modalView: {
     backgroundColor: COLORS.background,
